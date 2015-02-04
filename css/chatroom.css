@@ -1,0 +1,18 @@
+﻿body {
+    height:100%;
+    width:100%;
+    background-color:yellow;
+    position:relative;
+}
+
+@font-face {
+    font-family: IIParagonblack;
+    src: url("../fonts/Paragon_Cleaners_Black.eot"), url("../fonts/Paragon_Cleaners_Black.woff"), url("../fonts/Paragon_Cleaners_Black.ttf"), url("../fonts/Paragon_Cleaners_Black.svg");
+}
+
+.chattext
+{
+    font-family:IIParagonblack;
+    font-size:20px;
+    color:#FFF;
+}

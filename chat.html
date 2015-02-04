@@ -1,0 +1,385 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <link href="css/animate.css" rel="stylesheet" />
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/chatroom.css" rel="stylesheet" />
+    <script src="js/bootstrap.js"></script>
+    <script src="js/jquery.js"></script>
+    <script>
+
+
+        if (localStorage.getItem("token") == null || localStorage.getItem("token") == "")
+            window.location.href = "index.html";
+        var touser = "";
+        var ws;
+        var user = "";
+        function WebSocketTest() {
+            if ("WebSocket" in window) {
+                alert("WebSocket is supported by your Browser!");
+                // Let us open a web socket
+                ws = new WebSocket("ws://websocketss.azurewebsites.net/websocket2.ashx?chatname=" + localStorage.getItem("username") + "&isadmin=" + localStorage.getItem("isadmin"));
+                ws.onopen = function () {
+                    $.ajax({
+                        type: "PUT",
+                        url: "http://charapi.azurewebsites.net/api/chatuser?username=" + localStorage.getItem("username") + "&status=2",
+                        success: function (data) {
+                            $("#chatuserlist").empty();
+                            for (var i = 0; i <= data.length; i++) {
+                                if (data[i].status == "2") {
+                                    if (data[i].isadmin == "1" && localStorage.getItem("isadmin") != data[i].isadmin) {
+                                        $("#chatuserlist").append("<p id=" + data[i].username + " class='userstatus' onclick='cl(this);'  data-username=" + data[i].username + ">" + data[i].username + " : " + data[i].status + "</p></br>");
+                                        touser = data[i].username;
+                                    }
+                                }
+
+                                if (data[i].isadmin == "1" && localStorage.getItem("isadmin") != data[i].isadmin) {
+                                    $("#chatuserlist").empty();
+                                    $("#chatuserlist").append("<p id=" + data[i].username + " class='userstatus' onclick='cl(this);'  data-username=" + data[i].username + ">" + data[i].username + " : " + data[i].status + "</p></br>");
+                                    touser = data[i].username;
+                                }
+                                if (localStorage.getItem("isadmin") == "1") {
+                                    $("#chatuserlist").append("<p id=" + data[i].username + " class='userstatus' onclick='cl(this);'  data-username=" + data[i].username + ">" + data[i].username + " : " + data[i].status + "</p></br>");
+                                }
+                            }
+
+                        },
+                        error: function (result) {
+                            alert("fail");
+                        }
+                    });
+
+                    //var res = Date();
+                    //// Web Socket is connected, send data using send()
+                    //var jsondatas =
+                    //    {
+                    //        "fromuser": localStorage.getItem("username"),
+                    //        "touser": touser,
+                    //        "isadmin": localStorage.getItem("isadmin"),
+                    //        "date": res,
+                    //        "status": "0",
+                    //        "messagess": "green",
+                    //        "messagetype": "1",
+                    //    }
+                    //ws.send(JSON.stringify(jsondatas));
+                };
+                ws.onmessage = function (evt) {
+
+                    var received_msg = JSON.parse(evt.data);
+                    if (received_msg.status == "away") {
+                        $.ajax({
+                            type: "PUT",
+                            url: "http://charapi.azurewebsites.net/api/chatuser?username=" + received_msg.fromuser + "&status=1",
+                            success: function (data) {
+                                $("#chatuserlist").empty();
+                                for (var i = 0; i <= data.length; i++) {
+                                    if (data[i].status === "2") {
+                                        if (data[i].isadmin == "1" && localStorage.getItem("isadmin") != data[i].isadmin) {
+                                            $("#chatuserlist").append("<p id=" + data[i].username + " class='userstatus' onclick='cl(this);'  data-username=" + data[i].username + ">" + data[i].username + " : " + data[i].status + "</p></br>");
+                                            touser = data[i].username;
+                                        }
+                                    }
+
+                                    if (localStorage.getItem("isadmin") == "1") {
+                                        $("#chatuserlist").append("<p id=" + data[i].username + " class='userstatus' onclick='cl(this);' data-username=" + data[i].username + ">" + data[i].username + " : " + data[i].status + "</p></br>");
+                                    }
+                                }
+
+                            },
+                            error: function (result) {
+                                alert("fail");
+                            }
+                        });
+
+                    }
+                    else if (received_msg.status == "connect") {
+                        if (localStorage.getItem("isadmin") == "1") {
+                            $("#" + received_msg.fromuser + "").empty();
+                            $("#" + received_msg.fromuser + "").append("<p id=" + received_msg.fromuser + " class='userstatus' onclick='cl(this);'  data-username=" + received_msg.fromuser + ">" + received_msg.fromuser + " : " + received_msg.status + "</p></br>");
+                        }
+                        else {
+                            if (received_msg.isadmin == "1") {
+                                $("#chatuserlist").empty();
+                                $("#chatuserlist").append("<p id=" + received_msg.fromuser + " class='userstatus' onclick='cl(this);'  data-username=" + received_msg.fromuser + ">" + received_msg.fromuser + " : " + received_msg.status + "</p></br>");
+                                touser = received_msg.username;
+                            }
+                        }
+
+                    }
+
+                    if (received_msg.fromuser == localStorage.getItem("username")) {
+                        $("#chatroom").append("<p style='color:red;'>ME :" + received_msg.messagess + "</p><br/>");
+                    }
+                    else if (localStorage.getItem("isadmin") == "1") {
+                        $("#chatroom").append("<p style='color:green;' >" + received_msg.fromuser + ":" + received_msg.messagess + "</p><br/>");
+                    }
+
+                    if (received_msg.isadmin == "1") {
+                        if (received_msg.touser == localStorage.getItem("username")) {
+                            $("#chatroom").append("<p style='color:black;'>" + received_msg.fromuser + ":" + received_msg.messagess + "</p><br/>");
+                        }
+                    }
+
+
+
+                };
+                ws.onclose = function () {
+                    alert("Connection is closed...");
+                };
+            }
+            else {
+                // The browser doesn't support WebSocket
+                alert("WebSocket NOT supported by your Browser!");
+            }
+        }
+
+        WebSocketTest();
+
+
+        function sendcli() {
+            if (touser != "") {
+                var mes = $("#message").val();
+                if (mes != "") {
+                    var res = new Date();
+
+                    if (localStorage.getItem("isadmin") == "1") {
+                        touser = touser;
+                    }
+                    else {
+                        touser = "admin";
+                    }
+                    var jsondatas =
+                                 {
+                                     "fromuser": localStorage.getItem("username"),
+                                     "touser": touser,
+                                     "isadmin": localStorage.getItem("isadmin"),
+                                     "date": res,
+                                     "status": "0",
+                                     "messagess": $("#message").val(),
+                                     "messagetype": "1",
+                                 }
+                    ws.send(JSON.stringify(jsondatas));
+                    $("#message").val("");
+                }
+                else {
+                    alert("enter message");
+                }
+            }
+            else {
+                alert("select user");
+            }
+        };
+
+        function logout() {
+            $.ajax({
+                type: "PUT",
+                url: "http://charapi.azurewebsites.net/api/chatuser?username=" + localStorage.getItem("username") + "&status=1",
+                success: function (data) {
+                    localStorage.setItem("token", "");
+                    localStorage.setItem("isadmin", "");
+                    localStorage.setItem("status", "");
+                    localStorage.setItem("emailid", "");
+                    localStorage.setItem("username", "");
+                    window.location.href = "index.html";
+                },
+                error: function (result) {
+                    alert("fail");
+                }
+            });
+
+        };
+
+
+        //var messagelength = 0;
+        //var mess = "";
+        //var fromuser = "";
+        //if (localStorage.getItem("token") != null || localStorage.getItem("token") != "") {
+        //    $.ajax({
+        //        type: "GET",
+        //        url: "http://chatser.azurewebsites.net/api/message?username=" + localStorage.getItem("username"),
+        //        dataType: "json",
+        //        async: true,
+        //        success: function (data) {
+        //            if (data.length > messagelength) {
+        //                if (messagelength == 0) {
+        //                    for (var i = 0; i <= data.length; i++) {
+        //                        messagelength = data.length;
+        //                        mess = data[i].messagess;
+
+        //                        if (data[i].fromuser == localStorage.getItem("username")) {
+        //                            $("#chatroom").append("<p>ME : " + mess + "</p><br/>");
+        //                        }
+        //                        else {
+        //                            fromuser = data[i].fromuser;
+        //                            $("#chatroom").append("<p>" + fromuser + " : " + mess + "</p><br/>");
+        //                        }
+
+        //                        var percentageToScroll = 100;
+        //                        var height = $(document).innerHeight();
+        //                        var documentHeight = $(document).height();
+        //                        var scrollAmount = Math.round((height - 500) * percentageToScroll / 100);
+        //                        var overheight = $(document).height() - $(window).height();
+        //                        //alert(overheight);
+        //                        $("html, body").animate({ scrollTop: scrollAmount }, 900);
+        //                    }
+        //                }
+        //            }
+        //        },
+        //        error: function (result) {
+        //        }
+        //    });
+        //}
+        //setInterval(function () {
+        //    if (localStorage.getItem("token") != null || localStorage.getItem("token") != "") {
+        //        $.ajax({
+        //            type: "GET",
+        //            url: "http://chatser.azurewebsites.net/api/message?username=" + localStorage.getItem("username"),
+        //            dataType: "json",
+        //            async: true,
+        //            success: function (data) {
+
+        //                mess = data[parseInt(messagelength)].messagess;
+        //                if (data[parseInt(messagelength)].fromuser == localStorage.getItem("username")) {
+        //                    $("#chatroom").append("<p>ME : " + mess + "</p><br/>");
+        //                }
+        //                else {
+        //                    fromuser = data[parseInt(messagelength)].fromuser;
+        //                    $("#chatroom").append("<p>" + fromuser + " : " + mess + "</p><br/>");
+        //                }
+        //                var percentageToScroll = 100;
+        //                var height = $(document).innerHeight();
+        //                var documentHeight = $(document).height();
+        //                var scrollAmount = Math.round((height - 500) * percentageToScroll / 100);
+        //                var overheight = $(document).height() - $(window).height();
+        //                //alert(overheight);
+        //                $("html, body").animate({ scrollTop: scrollAmount }, 900);
+        //                messagelength = data.length
+        //            },
+        //            error: function (result) {
+        //            }
+        //        });
+        //    }
+        //}, 20000);
+
+        //function formatDate(date) {
+        //    var hours = date.getHours();
+        //    var minutes = date.getMinutes();
+        //    var ampm = hours >= 12 ? 'pm' : 'am';
+        //    hours = hours % 12;
+        //    hours = hours ? hours : 12; // the hour '0' should be '12'
+        //    minutes = minutes < 10 ? '0' + minutes : minutes;
+        //    var strTime = hours + ':' + minutes + ' ' + ampm;
+        //    return date.getMonth() + 1 + "/" + date.getDate() + "/" + date.getFullYear() + " " + strTime;
+        //}
+
+
+        //$("#sendbt").click(function () {
+
+        //    var d = new Date();
+        //    var e = formatDate(d);
+        //    var n = e.indexOf("pm");
+        //    if (n != -1) {
+        //        var res = e.replace(" pm", ":" + d.getSeconds());
+        //    }
+        //    else {
+        //        var s = e.indexOf("am");
+        //        if (s != -1) {
+        //            var res = e.replace(" am", ":" + d.getSeconds());
+        //        }
+        //    }
+        //    alert(res);
+        //    if (localStorage.getItem("username") == "summa") {
+        //        var jsondatas =
+        //                 {
+        //                     "fromuser": localStorage.getItem("username"),
+        //                     "touser": "su",
+        //                     "time": $("#ema").val(),
+        //                     "date": res,
+        //                     "status": "0",
+        //                     "messagess": $("#message").val(),
+        //                     "messagetype": "1",
+        //                 }
+        //    }
+        //    else {
+        //        var jsondatas =
+        //                {
+        //                    "fromuser": localStorage.getItem("username"),
+        //                    "touser": "summa",
+        //                    "time": $("#ema").val(),
+        //                    "date": res,
+        //                    "status": "0",
+        //                    "messagess": $("#message").val(),
+        //                    "messagetype": "1",
+        //                }
+        //    }
+        //    $.ajax({
+        //        type: "POST",
+        //        url: "http://chatser.azurewebsites.net/api/message",
+        //        data: jsondatas,
+        //        dataType: "json",
+        //        async: true,
+        //        success: function (data) {
+        //            $("#chatroom").append("<p>ME : " + $("#message").val() + "</p><br/>");
+        //            $("#message").val("");
+        //            var percentageToScroll = 100;
+        //            var height = $(document).innerHeight();
+        //            var documentHeight = $(document).height();
+        //            var scrollAmount = Math.round(height * percentageToScroll / 100);
+        //            var overheight = $(document).height() - $(window).height();
+        //            //alert(overheight);
+        //            $("html, body").animate({ scrollTop: scrollAmount }, 900);
+        //        },
+        //        error: function (result) {
+        //            alert("fail");
+        //        }
+        //    });
+
+        //});
+
+        function cl(arg) {
+
+            touser = arg.getAttribute("data-username");
+            alert(touser);
+        }
+
+        $('.userstatus').on('click', function () {
+            alert('triggered');
+        });
+        //$('.userstatus').click(function () {
+        //    touser = $(this).data("username");
+        //});
+
+
+
+    </script>
+</head>
+<body>
+
+    <div class="row">
+        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" style="height:100vh;">
+            <div style="height:50px;  width:100%; background-color:green; position:fixed; top:0px; left:0px;">
+                <input type="button" value="logout" id="logout" onclick="logout(this);" style=" padding:0px 20px; font-size: 20px; display: inline-block; height: 50px" />
+                <label class="chattext"> Chat Room</label>
+            </div>
+            <div id="chatuserlist" style="float: right; background-color: white; padding: 50px 50px 0px 50px; margin-bottom: 100px;"></div>
+            <div id="chatroom" style="display: block; background-color: yellow;  width: 100%; padding:50px 50px 0px 50px; margin-bottom: 100px; ">
+                <p onclick=""></p>
+            </div>
+            <div style="height:80px;  width:100%; background-color:green; position:fixed; bottom:0px; left:0px;">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="col-lg-10 col-md-10 col-sm-10 col-xs-10">
+                            <textarea id="message" placeholder="chat" cols="40" style=" font-size:20px; height:80px; width:100%; resize:none;  padding:10px 10px 10px 30px;"></textarea>
+                        </div>
+                        <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2">
+                            <input type="submit" value="send" id="sendbt" onclick="sendcli(this);" style="font-size: 20px; width: 100%;  height: 80px; " />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
